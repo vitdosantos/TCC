@@ -1,0 +1,9 @@
+Serviços utilizados
+FW
+vim curl ssh nftables isc-dhcp-server softflowd ansible python3-pip
+
+SRV1
+vim curl ssh flowcoll samba-ad-dc smbclient krb5-config krb5-user winbind acl dnsutils net-tools freeradius freeradius-ldap filebeat packetbeat rsyslog
+
+SRV2
+vim curl ssh logstash elasticsearch kibana
