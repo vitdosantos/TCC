@@ -1,0 +1,5 @@
+classification:
+  enable: true
+  type: ndpi
+  ndpi:
+    protocols_dir: /usr/share/ndpi/protos

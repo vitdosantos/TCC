@@ -1,0 +1,82 @@
+- name: 1 Instalar pacotes necessarios para os clients linux conseguirem entrar no dominio
+  ansible.builtin.apt:
+    name:
+      - realmd
+      - sssd
+      - sssd-tools
+      - libnss-sss
+      - libpam-sss
+      - krb5-user
+      - adcli
+      - packagekit
+    state: present
+    update_cache: yes
+
+- name: 1.5 verificar se o hosts ja esta no dominio
+  ansible.builtin.command: realm list
+  register: realm_list_status
+  changed_when: false
+  failed_when: false
+
+- name: 2. Ingressar clients no dominio
+  ansible.builtin.command:
+    cmd: "realm join --user={{ domain_admin_user }} {{ domain_realm }}"
+    stdin: "{{ domain_admin_pass }}"
+  when: "domain_realm not in realm_list_status.stdout"
+  register: realm_join_status
+  changed_when: realm_join_status.rc == 0
+  failed_when:
+    - realm_join_status.rc != 0
+    - "'already joined' not in realm_join_status.stderr"
+
+- name: 3. Corrigir SSSD - Nomes (use_fully_qualified_names)
+  ansible.builtin.replace:
+    path: /etc/sssd/sssd.conf
+    regexp: '^use_fully_qualified_names = True'
+    replace: 'use_fully_qualified_names = False'
+
+- name: 4. Corrigir SSSD - Home Dir (fallback_homedir)
+  ansible.builtin.replace:
+    path: /etc/sssd/sssd.conf
+    regexp: '^fallback_homedir = /home/%u@%d'
+    replace: 'fallback_homedir = /home/%u'
+
+- name: 5. Corrigir SSSD - Erro DynDNS (ad_dyndns_update)
+  ansible.builtin.lineinfile:
+    path: /etc/sssd/sssd.conf
+    line: 'ad_dyndns_update = False'
+    insertafter: '^access_provider = ad' # Adiciona depois desta linha
+
+- name: 6. Habilitar criação de Home Dir via PAM
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-session
+    regexp: '^session\s+required\s+pam_mkhomedir.so'
+    line: 'session    required    pam_mkhomedir.so skel=/etc/skel/ umask=0022'
+    state: present
+
+- name: 5. Garantir que o SSSD esta rodando
+  ansible.builtin.service:
+    name: sssd
+    state: started
+    enabled: yes
+
+- name: 2. instalar modulo de auth do radius
+  ansible.builtin.apt:
+    name: libpam-radius-auth
+    state: present
+
+- name: 4. Copiar arquivos para os clients
+  ansible.builtin.copy:
+    src: /opt/ansible/roles/debian_ad_client/files/common-session
+    dest: /etc/pam.d/common-session
+
+- name: 5. Copiar arquivos para os clients
+  ansible.builtin.copy:
+    src: /opt/ansible/roles/debian_ad_client/files/pam_radius_auth.conf
+    dest: /etc/pam_radius_auth.conf
+
+- name: 6. Restartar os hosts
+  ansible.builtin.shell: "shutdown -r +1 'Reinicio iniciado pelo ansible'"
+  async: 30
+  poll: 0
+  when: realm_join_status.changed

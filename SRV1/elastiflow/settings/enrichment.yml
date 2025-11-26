@@ -1,0 +1,7 @@
+enrichment:
+  dns:
+    enable: true
+    nameservers:
+      - 8.8.8.8
+    timeout: 500ms
+    ttl: 600s
