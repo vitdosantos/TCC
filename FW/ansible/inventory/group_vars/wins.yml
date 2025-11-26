@@ -1,0 +1,6 @@
+ansible_connection: winrm
+ansible_port: 5985
+ansible_winrm_transport: ntlm
+ansible_user: Administrator
+ansible_password: Skill39
+domain_admin_pass: Skill39

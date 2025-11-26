@@ -1,0 +1,13 @@
+- name: Automation no linux
+  hosts: debians
+  gather_facts: false
+
+  roles:
+    - debian_ad_client
+
+- name: Automation no win
+  hosts: wins
+  gather_facts: false
+
+  roles:
+    - windows_ad_client

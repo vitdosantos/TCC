@@ -1,0 +1,12 @@
+- name: 1. Ingressar os hosts windows do dominio
+  microsoft.ad.membership:
+    dns_domain_name: "vme.solutions"
+    domain_admin_user: "Administrator@vme.solutions"
+    domain_admin_password: "{{ domain_admin_pass }}"
+    state: domain
+  register: domain_join_result
+
+- name: 2. Reiniciar os clients windows apos ingressarem no dominio
+  ansible.windows.win_reboot:
+    msg: "Reiniciando"
+  when: domain_join_result.reboot_required

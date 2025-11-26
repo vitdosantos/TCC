@@ -1,0 +1,10 @@
+[linux_hosts]
+
+[windows_hosts]
+192.168.0.18
+
+[debians:children]
+linux_hosts
+
+[wins:children]
+windows_hosts
