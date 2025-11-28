@@ -1,0 +1,46 @@
+---
+- name: "Formando hosts dinamicos"
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: "1. Escanear a rede por hosts linux {{ network_to_scan }}"
+      ansible.builtin.shell: "nmap -p 22 -n {{ network_to_scan }} -oG - | awk '/open/{print $2}'"
+      register: ssh_hosts
+      changed_when: false
+
+    - name: "2. Escanear a rede por hosts windows {{ network_to_scan }}"
+      ansible.builtin.shell: "nmap -p 5985 -n {{ network_to_scan }} -oG - | awk '/open/{print $2}'"
+      register: winrm_hosts
+      changed_when: false
+
+    - name: "2. Gerar o arquivo de hosts dinamicos"
+      ansible.builtin.template:
+        src: "/opt/ansible/inventory/inventory.j2"
+        dest: "/opt/ansible/inventory/dynamic_hosts"
+
+      vars:
+        ssh_ip_list: "{{ ssh_hosts.stdout_lines }}"
+        winrm_ip_list: "{{ winrm_hosts.stdout_lines }}"
+
+    - name: 3. Recarregr o inventraio
+      ansible.builtin.meta: refresh_inventory
+      
+- name: "Instalar chave ssh nos novos hosts"
+  hosts: debians
+  gather_facts: false
+   
+  tasks:
+  - name: 1. Copiar a chave ssh para o client
+    ansible.posix.authorized_key:
+      user: "debian"
+      key: "{{ lookup('file', '/opt/ansible/roles/debian_ad_client/files/id_ed25519.pub') }}"
+      state: present
+
+- name: "Testar conexao com hosts windows"
+  hosts: wins
+  gather_facts: false
+
+  tasks:
+    - name: "1. Testar conexao WinRM (ping)"
+      ansible.windows.win_ping:
